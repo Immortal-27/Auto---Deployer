@@ -1,0 +1,104 @@
+HTTP_PORT=11626
+PUBLIC_HTTP_PORT=false
+
+PEER_PORT=11625
+
+{% if stellar_network == 'pubnet' %}
+NETWORK_PASSPHRASE="Public Global Stellar Network ; September 2015"
+KNOWN_PEERS=[
+"core-live-a.stellar.org",
+"core-live-b.stellar.org",
+"core-live-c.stellar.org"
+]
+
+[QUORUM_SET]
+THRESHOLD_PERCENT=66
+VALIDATORS=[
+"$sdf1",
+"$sdf2",
+"$sdf3"
+]
+
+[HISTORY.sdf1]
+get="curl -sf https://history.stellar.org/prd/core-live/core_live_001/{0} -o {1}"
+
+[HISTORY.sdf2]
+get="curl -sf https://history.stellar.org/prd/core-live/core_live_002/{0} -o {1}"
+
+[HISTORY.sdf3]
+get="curl -sf https://history.stellar.org/prd/core-live/core_live_003/{0} -o {1}"
+
+[VALIDATORS.sdf1]
+NAME="SDF 1"
+HOME_DOMAIN="stellar.org"
+PUBLIC_KEY="GCGB2S2KBER43ZNKXLG7FZNI3DIAFYP2VQS7CNMEQPJ373XLHEAL3W6"
+HISTORY="sdf1"
+
+[VALIDATORS.sdf2]
+NAME="SDF 2"
+HOME_DOMAIN="stellar.org"
+PUBLIC_KEY="GCM6QMP3DLUJ3T7DECTOS5Y4VP4XDBZQ5L2ZHZBZMQ73OATQPE2KIOG"
+HISTORY="sdf2"
+
+[VALIDATORS.sdf3]
+NAME="SDF 3"
+HOME_DOMAIN="stellar.org"
+PUBLIC_KEY="GABMKJM6I25XI4K7U6XWMULOUQIQ27BCTMLS6BYYSOWCTCI25LDAB5F"
+HISTORY="sdf3"
+
+{% else %}
+NETWORK_PASSPHRASE="Test SDF Network ; September 2015"
+KNOWN_PEERS=[
+"core-testnet1.stellar.org",
+"core-testnet2.stellar.org",
+"core-testnet3.stellar.org"
+]
+
+[QUORUM_SET]
+THRESHOLD_PERCENT=51
+VALIDATORS=[
+"$sdf_testnet_1",
+"$sdf_testnet_2",
+"$sdf_testnet_3"
+]
+
+[HISTORY.sdf_testnet_1]
+get="curl -sf https://history.stellar.org/prd/core-testnet/core_testnet_001/{0} -o {1}"
+
+[HISTORY.sdf_testnet_2]
+get="curl -sf https://history.stellar.org/prd/core-testnet/core_testnet_002/{0} -o {1}"
+
+[HISTORY.sdf_testnet_3]
+get="curl -sf https://history.stellar.org/prd/core-testnet/core_testnet_003/{0} -o {1}"
+
+[VALIDATORS.sdf_testnet_1]
+NAME="SDF Testnet 1"
+HOME_DOMAIN="stellar.org"
+PUBLIC_KEY="GDKXE2OZMJIPOSLNA6N6F2BVCI3O6CDMJ3PSRDU6KMZ6OQVSGQP3V5G"
+HISTORY="sdf_testnet_1"
+
+[VALIDATORS.sdf_testnet_2]
+NAME="SDF Testnet 2"
+HOME_DOMAIN="stellar.org"
+PUBLIC_KEY="GCUCJTIYXSOXKBSNFGNFWW5MUQ54HKRPGJUTQFJ5RQXZXNOLNXYDHRAP"
+HISTORY="sdf_testnet_2"
+
+[VALIDATORS.sdf_testnet_3]
+NAME="SDF Testnet 3"
+HOME_DOMAIN="stellar.org"
+PUBLIC_KEY="GC2V2EUSBEHLBH3MKZ2HUQ6UILY2BIY2R5BHUCFUSXBKR7UWBFCXTSAB"
+HISTORY="sdf_testnet_3"
+
+{% endif %}
+
+CATCHUP_COMPLETE=true
+CATCHUP_RECENT=0
+
+DATABASE="postgresql://dbname={{ db_name }} user={{ db_user }} password={{ db_password }} host=localhost"
+
+{% if stellar_mode == 'validator' %}
+# To be a validator you need a generated node seed which typically shouldn't be auto-generated blindly 
+# for a production node but here we leave a placeholder.
+# NODE_SEED="S..."
+# NODE_IS_VALIDATOR=true
+{% endif %}

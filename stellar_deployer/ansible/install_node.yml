@@ -1,0 +1,122 @@
+---
+- name: Install and configure Stellar Core
+  hosts: all
+  become: yes
+  vars:
+    db_name: stellar
+    db_user: stellar
+    db_password: "{{ lookup('env', 'STELLAR_DB_PASSWORD') | default(lookup('password', '/dev/urandom length=24 chars=ascii_letters,digits'), true) }}"
+    stellar_network: testnet  # can be overridden via -e
+    stellar_mode: watcher     # can be overridden via -e
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install dependencies
+      apt:
+        name:
+          - postgresql
+          - postgresql-contrib
+          - python3-psycopg2
+          - curl
+          - gnupg
+          - apt-transport-https
+        state: present
+
+    - name: Ensure PostgreSQL service is running
+      systemd:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Create PostgreSQL user
+      become_user: postgres
+      postgresql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        role_attr_flags: CREATEDB
+
+    - name: Create PostgreSQL database
+      become_user: postgres
+      postgresql_db:
+        name: "{{ db_name }}"
+        owner: "{{ db_user }}"
+
+    # --- Stellar Core Repository Setup (non-deprecated approach) ---
+    - name: Create keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Stellar SDF GPG key
+      ansible.builtin.get_url:
+        url: https://apt.stellar.org/SDF.asc
+        dest: /etc/apt/keyrings/stellar-sdf.asc
+        mode: '0644'
+
+    - name: Add Stellar repository with signed-by
+      apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/stellar-sdf.asc] https://apt.stellar.org focal stable"
+        state: present
+        filename: stellar
+
+    - name: Install stellar-core
+      apt:
+        name: stellar-core
+        state: present
+        update_cache: yes
+
+    - name: Create stellar-core configuration directory
+      file:
+        path: /etc/stellar
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Generate stellar-core.cfg from template
+      template:
+        src: templates/stellar-core.cfg.j2
+        dest: /etc/stellar/stellar-core.cfg
+        owner: root
+        group: root
+        mode: '0644'
+      notify:
+        - Restart stellar-core
+
+    - name: Initialize the database (if not initialized)
+      command: stellar-core new-db
+      become_user: root
+      ignore_errors: yes
+
+    - name: Enable and start stellar-core service
+      systemd:
+        name: stellar-core
+        state: started
+        enabled: yes
+
+    # --- Soroban CLI Installation ---
+    - name: Install Rust toolchain for Soroban
+      shell: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source $HOME/.cargo/env
+        rustup target add wasm32-unknown-unknown
+      args:
+        creates: /root/.cargo/bin/rustc
+
+    - name: Install Soroban CLI
+      shell: |
+        source /root/.cargo/env
+        cargo install --locked soroban-cli
+      args:
+        creates: /root/.cargo/bin/soroban
+
+  handlers:
+    - name: Restart stellar-core
+      systemd:
+        name: stellar-core
+        state: restarted

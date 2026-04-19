@@ -1,0 +1,6 @@
+typer
+boto3
+ansible
+ansible-runner
+requests
+stellar-sdk
